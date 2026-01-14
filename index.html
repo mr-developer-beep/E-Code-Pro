@@ -103,12 +103,44 @@ header {
     font-size: 11px; color: var(--text-sec); justify-content: space-between;
 }
 
-/* Preview Modal */
+/* --- Full Screen Preview --- */
 #preview-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: #fff; z-index: 3000; display: none; flex-direction: column;
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100vw; 
+    height: 100vh;
+    background: #fff; 
+    z-index: 9999; 
+    display: none; 
+    flex-direction: column;
+    animation: slideUp 0.3s ease-out;
 }
 #preview-overlay.open { display: flex; }
+
+.preview-header {
+    height: 55px; 
+    background: #1a1a1a; 
+    color: #fff; 
+    display: flex; 
+    align-items: center; 
+    padding: 0 20px; 
+    justify-content: space-between;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+#iframe { 
+    flex: 1; 
+    width: 100%; 
+    height: 100%; 
+    border: none; 
+    background: #fff;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
 
 @media(max-width: 768px){
     aside { position: fixed; height: 100%; transform: translateX(-100%); width: 280px; }
@@ -162,10 +194,14 @@ header {
         <div id="sync-status">Ready</div>
     </div>
 
+    <!-- Corrected Full Screen Preview Overlay -->
     <div id="preview-overlay">
-        <div style="height:50px; background:#1a1a1a; color:#fff; display:flex; align-items:center; padding:0 20px; justify-content:space-between">
-            <span><img src="https://i.postimg.cc/pdq7KMwz/E-code.png" style="height:20px; vertical-align:middle; margin-right:8px"> Live Preview</span>
-            <i class="ri-close-line" style="font-size:26px; cursor:pointer" onclick="closePreview()"></i>
+        <div class="preview-header">
+            <div style="display:flex; align-items:center; gap:10px">
+                <img src="https://i.postimg.cc/pdq7KMwz/E-code.png" style="height:25px; border-radius:4px">
+                <span style="font-weight:600; letter-spacing:0.5px">Live Preview Mode</span>
+            </div>
+            <i class="ri-close-circle-fill" style="font-size:30px; cursor:pointer; color:var(--danger)" onclick="closePreview()"></i>
         </div>
         <iframe id="iframe"></iframe>
     </div>
@@ -216,15 +252,22 @@ require(["vs/editor/editor.main"], function () {
     });
 });
 
-/* Smart Preview Logic */
+/* Smart Full Screen Preview Logic */
 function run() {
     if(!pid || !file) return alert("Please open a project and a file first!");
     const f = projects[pid].files;
     const iframe = document.getElementById("iframe");
     let finalOutput = "";
 
+    // Added viewport meta to output for better mobile rendering
+    const viewportMeta = '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+
     if (file.endsWith(".html")) {
         finalOutput = f[file];
+        // Inject meta if missing
+        if(!finalOutput.includes("viewport")) {
+            finalOutput = finalOutput.replace("<head>", `<head>${viewportMeta}`);
+        }
         if(f['style.css'] && !finalOutput.includes("<style>")) {
             finalOutput = finalOutput.replace("</head>", `<style>${f['style.css']}</style></head>`);
         }
@@ -232,7 +275,7 @@ function run() {
             finalOutput += `<script>${f['script.js']}<\/script>`;
         }
     } else {
-        finalOutput = f[file];
+        finalOutput = `<!DOCTYPE html><html><head>${viewportMeta}<style>${f['style.css'] || ''}</style></head><body>${f[file]}<script>${f['script.js'] || ''}<\/script></body></html>`;
     }
     iframe.srcdoc = finalOutput;
     document.getElementById("preview-overlay").classList.add("open");
