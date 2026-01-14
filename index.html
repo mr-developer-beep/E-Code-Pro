@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>E-CODE PRO - Cloud IDE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+
+<!-- Tab Icon & Branding -->
+<link rel="icon" type="image/png" href="https://i.postimg.cc/pdq7KMwz/E-code.png">
+<link rel="apple-touch-icon" href="https://i.postimg.cc/pdq7KMwz/E-code.png">
+<meta name="theme-color" content="#0b0b0f">
+
+<!-- Fonts & Icons -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+
+<!-- Monaco Editor (VS Code Engine) -->
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+
+<style>
+:root {
+    --bg-main: #0b0b0f;
+    --bg-sec: #121217;
+    --bg-ter: #1c1c24;
+    --accent: #7d5fff;
+    --accent-glow: rgba(125, 95, 255, 0.3);
+    --text-main: #e4e4eb;
+    --text-sec: #8f8f9d;
+    --border: #26262f;
+    --danger: #ff4757;
+}
+
+* { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-main); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; }
+
+/* Sidebar */
+aside {
+    width: 280px;
+    background: var(--bg-sec);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2000;
+}
+
+.sidebar-header {
+    padding: 18px 15px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+}
+.sidebar-header .logo-img { width: 35px; height: 35px; border-radius: 8px; box-shadow: 0 0 10px var(--accent-glow); }
+.sidebar-header h2 { margin: 0; font-size: 16px; font-weight: 700; color: #fff; flex: 1; }
+
+.mobile-close-btn { display: none; background: none; border: none; color: var(--text-sec); font-size: 24px; cursor: pointer; }
+
+.section-title {
+    padding: 20px 15px 8px;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; color: var(--text-sec);
+    letter-spacing: 1.2px; display: flex; justify-content: space-between; align-items: center;
+}
+
+.btn-icon { cursor: pointer; transition: 0.2s; padding: 4px; border-radius: 4px; color: var(--text-sec); }
+.btn-icon:hover { color: #fff; background: var(--bg-ter); }
+
+ul { list-style: none; padding: 0 8px; margin: 0; overflow-y: auto; flex: 1; }
+li {
+    padding: 10px 12px; margin-bottom: 2px;
+    cursor: pointer; display: flex; align-items: center;
+    gap: 10px; font-size: 13.5px; border-radius: 6px;
+    transition: 0.2s; color: var(--text-sec); position: relative;
+}
+li:hover { background: var(--bg-ter); color: #fff; }
+li.active { background: var(--accent-glow); color: var(--accent); font-weight: 600; }
+li .delete-btn { position: absolute; right: 10px; display: none; color: var(--danger); }
+li:hover .delete-btn { display: block; }
+
+/* Main Area */
+main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
+header {
+    height: 60px; background: var(--bg-main);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 15px; justify-content: space-between;
+}
+
+.nav-left { display: flex; align-items: center; gap: 8px; }
+.btn {
+    border: none; border-radius: 8px; padding: 8px 14px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; font-family: inherit;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-secondary { background: var(--bg-ter); color: var(--text-main); border: 1px solid var(--border); }
+
+#editor-container { flex: 1; position: relative; }
+#editor { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+
+.status-bar {
+    height: 30px; background: var(--bg-sec); border-top: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 15px;
+    font-size: 11px; color: var(--text-sec); justify-content: space-between;
+}
+
+/* Preview Modal */
+#preview-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: #fff; z-index: 3000; display: none; flex-direction: column;
+}
+#preview-overlay.open { display: flex; }
+
+@media(max-width: 768px){
+    aside { position: fixed; height: 100%; transform: translateX(-100%); width: 280px; }
+    aside.open { transform: translateX(0); box-shadow: 15px 0 50px rgba(0,0,0,0.6); }
+    .mobile-close-btn { display: block; }
+    .nav-text { display: none; }
+}
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+    <div class="sidebar-header">
+        <img src="https://i.postimg.cc/pdq7KMwz/E-code.png" alt="Logo" class="logo-img">
+        <h2>E-CODE PRO</h2>
+        <button class="mobile-close-btn" onclick="toggleSidebar()"><i class="ri-close-line"></i></button>
+    </div>
+
+    <div class="section-title">PROJECTS <i class="ri-add-line btn-icon" onclick="newProject()"></i></div>
+    <ul id="projects"></ul>
+
+    <div class="section-title">FILES <i class="ri-file-add-line btn-icon" onclick="newFile()"></i></div>
+    <ul id="files"></ul>
+    
+    <div style="margin-top:auto; padding: 15px; border-top: 1px solid var(--border)">
+        <div id="user-display" style="font-size:11px; margin-bottom:10px; color:var(--text-sec)">
+            <i class="ri-user-smile-line"></i> <span id="user-name">Local Mode</span>
+        </div>
+        <button class="btn btn-secondary" style="width:100%; justify-content:center" onclick="loginOrLogout()">
+            <i class="ri-google-fill"></i> <span id="auth-btn-text">Connect Cloud</span>
+        </button>
+    </div>
+</aside>
+
+<main>
+    <header>
+        <div class="nav-left">
+            <i class="ri-menu-2-line btn-icon" onclick="toggleSidebar()" style="font-size:22px"></i>
+            <span id="current-file-name" style="font-weight:600; font-size:14px; margin-left:5px">Welcome</span>
+        </div>
+        <div style="display:flex; gap:8px">
+            <button class="btn btn-secondary" onclick="formatCode()"><i class="ri-magic-line"></i><span class="nav-text">Format</span></button>
+            <button class="btn btn-primary" onclick="run()"><i class="ri-play-fill"></i><span class="nav-text">Run Project</span></button>
+        </div>
+    </header>
+
+    <div id="editor-container"><div id="editor"></div></div>
+
+    <div class="status-bar">
+        <div id="editor-pos">Ln 1, Col 1</div>
+        <div id="sync-status">Ready</div>
+    </div>
+
+    <div id="preview-overlay">
+        <div style="height:50px; background:#1a1a1a; color:#fff; display:flex; align-items:center; padding:0 20px; justify-content:space-between">
+            <span><img src="https://i.postimg.cc/pdq7KMwz/E-code.png" style="height:20px; vertical-align:middle; margin-right:8px"> Live Preview</span>
+            <i class="ri-close-line" style="font-size:26px; cursor:pointer" onclick="closePreview()"></i>
+        </div>
+        <iframe id="iframe"></iframe>
+    </div>
+</main>
+
+<!-- Firebase Config -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA59pVUVxgoTmesVtRt6iDQkeRQqbXflsQ",
+  authDomain: "e-code-pro.firebaseapp.com",
+  databaseURL: "https://e-code-pro-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "e-code-pro",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+window.fb = { auth, db, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, ref, set, onValue };
+</script>
+
+<script>
+let editor, user = null, projects = {}, pid = null, file = null;
+let isSwitching = false, debounceTimer;
+
+function toggleSidebar(){ document.getElementById('sidebar').classList.toggle('open'); }
+function closePreview(){ document.getElementById('preview-overlay').classList.remove('open'); }
+
+/* Monaco Editor Init */
+require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+require(["vs/editor/editor.main"], function () {
+    editor = monaco.editor.create(document.getElementById('editor'), {
+        value: "/* Welcome to E-CODE PRO */\n\n// Create a project to start coding...",
+        language: 'javascript', theme: 'vs-dark', automaticLayout: true, fontSize: 14
+    });
+    editor.onDidChangeCursorPosition(e => {
+        document.getElementById('editor-pos').innerText = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+    });
+    editor.onDidChangeModelContent(() => {
+        if(pid && file && !isSwitching) {
+            projects[pid].files[file] = editor.getValue();
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(saveData, 1000);
+        }
+    });
+});
+
+/* Smart Preview Logic */
+function run() {
+    if(!pid || !file) return alert("Please open a project and a file first!");
+    const f = projects[pid].files;
+    const iframe = document.getElementById("iframe");
+    let finalOutput = "";
+
+    if (file.endsWith(".html")) {
+        finalOutput = f[file];
+        if(f['style.css'] && !finalOutput.includes("<style>")) {
+            finalOutput = finalOutput.replace("</head>", `<style>${f['style.css']}</style></head>`);
+        }
+        if(f['script.js'] && !finalOutput.includes("<script>")) {
+            finalOutput += `<script>${f['script.js']}<\/script>`;
+        }
+    } else {
+        finalOutput = f[file];
+    }
+    iframe.srcdoc = finalOutput;
+    document.getElementById("preview-overlay").classList.add("open");
+}
+
+/* Data & Firebase Logic */
+function saveData() {
+    document.getElementById('sync-status').innerText = "Saving...";
+    if(user) fb.set(fb.ref(fb.db, 'users/' + user.uid + '/projects'), projects);
+    else localStorage.setItem('e_code_local', JSON.stringify(projects));
+    setTimeout(() => document.getElementById('sync-status').innerText = "Changes saved", 800);
+}
+
+function newProject() {
+    const name = prompt("Project Name:");
+    if(!name) return;
+    const id = "p_" + Date.now();
+    projects[id] = { name, files: {"index.html": "<h1>" + name + "</h1>", "style.css": "", "script.js": ""} };
+    saveData(); renderProjects(); openProject(id);
+}
+
+function renderProjects() {
+    const ul = document.getElementById("projects"); ul.innerHTML = "";
+    Object.keys(projects).forEach(id => {
+        const li = document.createElement("li");
+        if(id === pid) li.className = "active";
+        li.innerHTML = `<i class="ri-folder-fill"></i> <span style="flex:1">${projects[id].name}</span> <i class="ri-delete-bin-line delete-btn" onclick="deleteProject('${id}', event)"></i>`;
+        li.onclick = () => openProject(id);
+        ul.appendChild(li);
+    });
+}
+
+function deleteProject(id, e) {
+    e.stopPropagation();
+    if(confirm("Delete Project?")) {
+        delete projects[id];
+        if(pid === id) { pid = null; file = null; editor.setValue(""); }
+        saveData(); renderProjects(); renderFiles();
+    }
+}
+
+function openProject(id) {
+    pid = id; renderProjects(); renderFiles();
+    const firstFile = Object.keys(projects[id].files)[0];
+    if(firstFile) openFile(firstFile);
+}
+
+function newFile() {
+    if(!pid) return;
+    const name = prompt("Filename (e.g. index.html):");
+    if(name) { projects[pid].files[name] = ""; saveData(); renderFiles(); openFile(name); }
+}
+
+function renderFiles() {
+    const ul = document.getElementById("files"); ul.innerHTML = "";
+    if(!pid) return;
+    Object.keys(projects[pid].files).forEach(f => {
+        const li = document.createElement("li");
+        if(f === file) li.className = "active";
+        li.innerHTML = `<i class="ri-file-line"></i> <span style="flex:1">${f}</span> <i class="ri-close-line delete-btn" onclick="deleteFile('${f}', event)"></i>`;
+        li.onclick = () => openFile(f);
+        ul.appendChild(li);
+    });
+}
+
+function openFile(f) {
+    isSwitching = true; file = f;
+    document.getElementById("current-file-name").innerText = f;
+    editor.setValue(projects[pid].files[f]);
+    const ext = f.split('.').pop();
+    monaco.editor.setModelLanguage(editor.getModel(), ext === 'js' ? 'javascript' : ext === 'css' ? 'css' : 'html');
+    renderFiles(); isSwitching = false;
+    if(window.innerWidth < 768) toggleSidebar();
+}
+
+function deleteFile(f, e) {
+    e.stopPropagation();
+    if(confirm("Delete File?")) {
+        delete projects[pid].files[f];
+        if(file === f) { file = null; editor.setValue(""); }
+        saveData(); renderFiles();
+    }
+}
+
+function formatCode() { editor.getAction('editor.action.formatDocument').run(); }
+
+function loginOrLogout() {
+    if(user) fb.signOut(fb.auth).then(() => location.reload());
+    else fb.signInWithPopup(fb.auth, new fb.GoogleAuthProvider());
+}
+
+window.addEventListener('load', () => {
+    const checkFB = setInterval(() => {
+        if(window.fb) {
+            clearInterval(checkFB);
+            fb.onAuthStateChanged(fb.auth, u => {
+                if(u) {
+                    user = u;
+                    document.getElementById('user-name').innerText = u.displayName;
+                    document.getElementById('auth-btn-text').innerText = "Logout Cloud";
+                    fb.onValue(fb.ref(fb.db, 'users/' + user.uid + '/projects'), (snap) => {
+                        if(snap.val()) { projects = snap.val(); renderProjects(); }
+                    });
+                } else {
+                    const local = localStorage.getItem('e_code_local');
+                    if(local) { projects = JSON.parse(local); renderProjects(); }
+                }
+            });
+        }
+    }, 500);
+});
+</script>
+</body>
+</html>
